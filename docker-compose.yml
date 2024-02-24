@@ -1,0 +1,48 @@
+version: '4.24'
+
+services:
+
+  redis:
+    image: redis:7.0.11-alpine
+
+#  db:
+#    image: postgres
+#    environment:
+#      POSTGRES_DB: test
+#      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD: 123
+#    ports:
+#      - "5432:5432"
+
+  web:
+    build:
+      context: .
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app/
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+
+  celery:
+    container_name: celery
+    build:
+      context: .
+    command: celery -A djangofls worker --loglevel=info
+    volumes:
+      - .:/app/
+    depends_on:
+      - redis
+      - web
+
+  celery-beat:
+    container_name: celery-beat
+    build:
+      context: .
+    command: celery -A djangofls beat --loglevel=info
+    volumes:
+      - .:/app/
+    depends_on:
+      - redis
+      - web
